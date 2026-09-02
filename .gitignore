@@ -6,3 +6,5 @@ test.py
 config/amazon_s3/credentials
 config/*.credentials
 .venv
+AzuriteConfig
+*.so
