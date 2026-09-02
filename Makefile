@@ -16,6 +16,10 @@ run_azure: build_hsm_tls
 	printf "Running the Azure client"
 	$(PYTHON_ENV_BINARY) -m app.azure.gui
 
+run_sharepoint: build_hsm_tls
+	printf "Running the SharePoint client"
+	$(PYTHON_ENV_BINARY) -m app.sharepoint.gui
+
 run_amazon: build_hsm_tls
 	printf "Running the Amazon S3 client"
 	$(PYTHON_ENV_BINARY) -m app.amazon_s3.gui
@@ -38,4 +42,4 @@ run_monolithic_template:
 	printf "Running the Azure client"
 	$(PYTHON_ENV_BINARY) -m app.templates.monolithic_client_template
 
-.PHONY: build_hsm_tls run_intermediate_server run_azure run_google run_amazon run_localhost_client run_monolithic
+.PHONY: build_hsm_tls run_intermediate_server run_azure run_sharepoint run_google run_amazon run_localhost_client run_monolithic

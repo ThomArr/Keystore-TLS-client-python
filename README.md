@@ -77,9 +77,50 @@ Unlike the rest of the project, which is written in Python, this component is im
 The shared library is built automatically when running:
 
 > make run_azure  
+> make run_sharepoint
 > make run_amazon  
 > make run_google
 
 It can also be rebuilt manually with:
 
 > make build_hsm_tls
+
+## SharePoint configuration
+
+SharePoint uses Microsoft Graph with an App Registration.
+
+### 1. Create the App Registration
+
+Go to: `Microsoft Entra ID` -> `App registrations` -> `New registration`
+
+Copy:
+- `Application (client) ID`
+- `Directory (tenant) ID`
+
+### 2. Create a client secret
+
+Go to: `Certificates & secrets` -> `Client secrets` -> `New client secret`
+
+Copy the secret value.
+
+### 3. Add API permissions
+
+Go to: `API permissions` -> `Add a permission` -> `Microsoft Graph` -> `Application permissions`
+
+Add:
+- `Sites.ReadWrite.All`
+- `Files.ReadWrite.All`
+
+Then click: `Grant admin consent`
+
+### 4. Configure the client
+
+Create: `config/sharepoint.credentials`
+with:
+``` 
+tenant_id=YOUR_TENANT_ID
+client_id=YOUR_CLIENT_ID
+client_secret=YOUR_CLIENT_SECRET
+sharepoint_hostname=???.sharepoint.com
+sharepoint_site_path=sites/???
+```

@@ -5,3 +5,4 @@ tink
 boto3
 aws_encryption_sdk
 pycryptodome
+msal
