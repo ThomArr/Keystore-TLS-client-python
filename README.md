@@ -68,13 +68,18 @@ A `config.yaml` file is needed (private).
 ### Notes
 When using the same local connection (same socket) to send different requests to different keystores, wait for the response of the last request sent or use a connection per keystore. The ordering of the responses received is guaranteed only on the same keystore when the requests originate from the same socket.
 
-### More infos
-OpenSSL is provided because it has to be patched for the code to work.   
-You can get the patched source code on the [OpenSSL-CCM repo](https://github.com/anaelmessan/openssl-ccm-enabled).  
-To compile it you can do:  
-> ./Configure  
-> make
+### Native TLS Wrapper
 
-Then copy the compiled binaries to the directory `OpenSSL/openssl-patched/`.
+The HSM TLS connection relies on a small native C shared library: core/tls/libhsm_tls.so
 
+Unlike the rest of the project, which is written in Python, this component is implemented in C and uses OpenSSL directly to configure TLS 1.3 PSK communication and the required ciphersuite: TLS_AES_128_CCM_SHA256
 
+The shared library is built automatically when running:
+
+> make run_azure  
+> make run_amazon  
+> make run_google
+
+It can also be rebuilt manually with:
+
+> make build_hsm_tls
