@@ -1,5 +1,4 @@
-import ssl
-import socket
+from core.tls.hsm_tls import HSMTLSClient
 import os
 import threading
 
@@ -50,14 +49,10 @@ class TLSSocketWrapper:
         self.__hostname = hostname
         self.__port = port
         self.__servername = servername
-        self.__context = self.__create_ssl_context()
-        self.__ssock = None
+        self.__client = None
         self.__psk = psk
         self.__ensure_connected_before_send = ensure_connected_before_send
-        if psk is not None:
-            self.__context.set_psk_client_callback(
-                lambda hint: ("Client_identity", self.__psk)
-            )
+        
 
     ############## Read-only instance attributes ###############
     @property
@@ -67,21 +62,6 @@ class TLSSocketWrapper:
     @property
     def servername(self):
         return self.__servername
-
-    @staticmethod
-    def __create_ssl_context():
-        """
-        Create and configure the TLS 1.3 context.
-        """
-
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
-        ssl_context.maximum_version = ssl.TLSVersion.TLSv1_3
-        ssl_context.set_ecdh_curve("prime256v1")
-        ssl_context.options &= ssl.OP_NO_TICKET
-        return ssl_context
 
     # DEPRECATED
     def set_psk(self, psk):
@@ -93,9 +73,6 @@ class TLSSocketWrapper:
         """
 
         self.__psk = psk
-        self.__context.set_psk_client_callback(
-            lambda hint: ("Client_identity", self.__psk)
-        )
 
     def connect(self):
         """
@@ -108,16 +85,15 @@ class TLSSocketWrapper:
         if not self.__hostname or not self.__port:
             print("Hostname or port not set")
             raise Exception("Hostname or port not set")
-        sock = socket.create_connection((self.__hostname, self.__port), timeout=10)
 
-        try:
-            self.__ssock = self.__context.wrap_socket(
-                sock, server_hostname=self.__servername
-            )
+        self.__client = HSMTLSClient(
+            self.__hostname,
+            self.__port,
+            self.__servername,
+            self.__psk,
+        )
 
-        except Exception as e:
-            sock.close()
-            raise Exception(f"TLS handshake failed: {e}")
+        self.__client.connect()
 
         return self
 
@@ -358,15 +334,15 @@ class TLSSocketWrapper:
         """
 
         data = "?02\n".encode("utf-8")
-        self.__ssock.send(data)
-        self.__ssock.close()
+        self.__client.send(data)
+        self.__client.close()
 
     def _close_socket(self):
         """
         Close the TLS socket
         """
 
-        self.__ssock.close()
+        self.__client.close()
 
     def receive_command_bytes(self):
         """
@@ -375,7 +351,7 @@ class TLSSocketWrapper:
         Returns:
             bytes: Data received from the server.
         """
-        data = self.__ssock.recv(4096)
+        data = self.__client.recv(4096)
         if data == b"":
             raise TLSConnectionClosed("Server closed connection (EOF).")
         return data
@@ -394,7 +370,7 @@ class TLSSocketWrapper:
         """
 
         # TODO add a try block to ensure connection (no close socket in the except)
-        self.__ssock.send(data)
+        self.__client.send(data)
         try:
             response = self.receive_command_bytes()
         except TLSConnectionClosed:
@@ -403,7 +379,7 @@ class TLSSocketWrapper:
                 try:
                     self._close_socket()
                     self.connect()
-                    self.__ssock.send(data)
+                    self.__client.send(data)
                     response = self.receive_command_bytes()
                 except Exception as e:
                     raise TLSReconnectFailed(
@@ -421,7 +397,6 @@ class TLSSocketWrapper:
             self.__hostname
             + str(self.__port)
             + str(self.__servername)
-            + str(self.__context)
-            + str(self.__ssock)
+            + str(self.__client)
             + str(self.__psk)
         )
